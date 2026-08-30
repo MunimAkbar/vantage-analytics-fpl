@@ -119,16 +119,12 @@ def build_features() -> pd.DataFrame:
     fixture_info = next_fixture_difficulty(players, teams, fixtures)
     p_start = start_probability(players, form)
 
-    features = players[["id", "web_name", "team_name", "position", "now_cost"]].copy()
-    features["p_start"] = p_start
-    features = features.merge(form.drop(columns=["player_id"], errors="ignore"),
-                               left_on="id", right_index=False, how="left",
-                               left_index=False)
-    # merge form properly on player_id
     features = players[["id", "web_name", "team_name", "position", "now_cost"]].merge(
         form, left_on="id", right_on="player_id", how="left"
     ).drop(columns=["player_id"])
+
     features["p_start"] = p_start.values
+
     features = features.merge(
         fixture_info.drop(columns=["team"]), on="id", how="left"
     )
