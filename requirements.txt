@@ -1,0 +1,12 @@
+# Core
+pandas>=2.0
+numpy>=1.24
+requests>=2.31
+python-dotenv>=1.0
+
+# Will add as the project grows:
+# scikit-learn      (V2 regression models)
+# xgboost / lightgbm / catboost   (V4 models)
+# pulp / ortools    (squad optimizer, Phase 4)
+# streamlit         (dashboard, Phase 9)
+# pytest            (tests)
