@@ -95,7 +95,7 @@ def compute_xpts(row: pd.Series) -> pd.Series:
     goal_pts = p_start * xg_match * GOAL_POINTS.get(position, 0)
     assist_pts = p_start * xa_match * ASSIST_POINTS
 
-    cs_prob = clean_sheet_probability(row.get("next_fixture_difficulty"))
+    cs_prob = clean_sheet_probability(row.get("fixture_run_difficulty"))
     cs_pts = p_start * cs_prob * CLEAN_SHEET_POINTS.get(position, 0)
 
     bonus_pts = p_start * bonus_points_proxy(xg_match, xa_match)

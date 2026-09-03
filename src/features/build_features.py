@@ -21,6 +21,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(
 logger = logging.getLogger(__name__)
 
 ROLLING_WINDOW = 5  # games
+FIXTURE_RUN_LENGTH = 5  # gameweeks to look ahead for the squad-holding window
 
 
 def load_processed() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -112,11 +113,40 @@ def next_fixture_difficulty(players: pd.DataFrame, teams: pd.DataFrame, fixtures
     return players[["id", "team"]].merge(fixture_df, on="team", how="left")
 
 
+def next_n_fixtures_difficulty(players: pd.DataFrame, fixtures: pd.DataFrame, n: int = FIXTURE_RUN_LENGTH) -> pd.DataFrame:
+    """Average fixture difficulty (FDR) across each team's next n fixtures.
+
+    Unlike next_fixture_difficulty (single upcoming match), this looks
+    further ahead — since a squad is held across multiple gameweeks, not
+    rebuilt weekly, picking players purely on next week's matchup ignores
+    whether their run of fixtures afterward is actually good or brutal.
+    """
+    upcoming = fixtures[fixtures["finished"] == False].copy()  # noqa: E712
+    upcoming = upcoming.sort_values("gameweek_id")
+
+    team_fdrs: dict[int, list[float]] = {}
+    for _, row in upcoming.iterrows():
+        for team_col, fdr_col in [("team_h", "team_h_difficulty"), ("team_a", "team_a_difficulty")]:
+            team_id = row[team_col]
+            team_fdrs.setdefault(team_id, []).append(row[fdr_col])
+
+    avg_fdr = {
+        team_id: sum(fdrs[:n]) / len(fdrs[:n])
+        for team_id, fdrs in team_fdrs.items()
+        if fdrs
+    }
+
+    result = players[["id", "team"]].copy()
+    result["fixture_run_difficulty"] = result["team"].map(avg_fdr)
+    return result[["id", "fixture_run_difficulty"]]
+
+
 def build_features() -> pd.DataFrame:
     players, teams, fixtures, history = load_processed()
 
     form = rolling_form_features(history)
     fixture_info = next_fixture_difficulty(players, teams, fixtures)
+    fixture_run = next_n_fixtures_difficulty(players, fixtures, n=FIXTURE_RUN_LENGTH)
     p_start = start_probability(players, form)
 
     features = players[["id", "web_name", "team_name", "position", "now_cost"]].merge(
@@ -128,6 +158,7 @@ def build_features() -> pd.DataFrame:
     features = features.merge(
         fixture_info.drop(columns=["team"]), on="id", how="left"
     )
+    features = features.merge(fixture_run, on="id", how="left")
 
     # Fill players with no history yet (e.g. new signings) with conservative defaults.
     features[["avg_minutes_last_n", "avg_points_last_n", "xG_per90_last_n",
