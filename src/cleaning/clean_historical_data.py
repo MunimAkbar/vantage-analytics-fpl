@@ -15,6 +15,8 @@ Usage:
     python -m src.cleaning.clean_historical_data
 """
 
+from pathlib import Path
+# pyrefly: ignore [invalid-syntax]
 from __future__ import annotations
 
 import logging

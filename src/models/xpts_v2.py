@@ -21,7 +21,9 @@ from __future__ import annotations
 import argparse
 import logging
 
+# pyrefly: ignore [missing-import]
 import joblib
+# pyrefly: ignore [missing-import]
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import Ridge

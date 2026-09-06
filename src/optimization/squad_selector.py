@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 
 import pandas as pd
+# pyrefly: ignore [missing-import]
 import pulp
 
 from configs.fpl_constraints import MAX_PLAYERS_PER_CLUB, SQUAD_BUDGET, SQUAD_POSITION_COUNTS
