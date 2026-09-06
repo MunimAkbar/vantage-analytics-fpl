@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(
 logger = logging.getLogger(__name__)
 
 FIXTURE_COLUMNS = [
-    "id", "event", "kickoff_time", "finished", "team_h", "team_a",
+    "id", "event", "kickoff_time", "finished", "finished_provisional", "team_h", "team_a",
     "team_h_score", "team_a_score", "team_h_difficulty", "team_a_difficulty",
 ]
 
