@@ -1,24 +1,14 @@
 """
 gameweek_review.py
 
-Compares a locked AI decision (from decision_log.py) against what
-actually happened once a Gameweek's matches are finished. This is the
-core "was the AI right" checkpoint for the human-vs-AI experiment.
-
-Correctly handles partial gameweeks: a player whose team hasn't played
-yet is excluded from scoring/error calculations rather than being
-treated as if they'd already returned 0 points.
-
-Prerequisites before running this for a given gameweek:
-  1. Re-run ingestion + cleaning so player_history.csv and fixtures.csv
-     reflect the latest state:
-       python -m src.ingestion.fetch_fpl_data
-       python -m src.ingestion.fetch_fpl_data --player-history
-       python -m src.cleaning.run_cleaning
-       python -m src.cleaning.clean_player_history
+Compares a locked model-version decision (from decision_log.py) against
+what actually happened once a Gameweek's matches are finished.
+Version-aware: run separately for v1 and v2, then use compare_models.py
+for the head-to-head.
 
 Usage:
-    python -m src.evaluation.gameweek_review --gameweek 3
+    python -m src.evaluation.gameweek_review --gameweek 4 --version v1
+    python -m src.evaluation.gameweek_review --gameweek 4 --version v2
 """
 
 from __future__ import annotations
@@ -36,12 +26,12 @@ logger = logging.getLogger(__name__)
 DECISIONS_DIR = DATA_PROCESSED_DIR / "decisions"
 
 
-def load_decision(gameweek: int) -> pd.DataFrame:
-    path = DECISIONS_DIR / f"gw{gameweek}_decision.csv"
+def load_decision(gameweek: int, version: str) -> pd.DataFrame:
+    path = DECISIONS_DIR / f"gw{gameweek}_decision_{version}.csv"
     if not path.exists():
         raise FileNotFoundError(
             f"{path} not found. Run 'python -m src.evaluation.decision_log "
-            f"--gameweek {gameweek}' before the deadline, next time."
+            f"--gameweek {gameweek} --version {version}' before the deadline, next time."
         )
     return pd.read_csv(path)
 
@@ -54,8 +44,7 @@ def load_actual_results(gameweek: int) -> pd.DataFrame:
         raise ValueError(
             f"No results found for gameweek {gameweek} in player_history.csv. "
             "Either the gameweek hasn't started yet, or you need to re-run: "
-            "fetch_fpl_data.py --player-history and clean_player_history.py "
-            "to pull the latest results."
+            "fetch_fpl_data.py --player-history and clean_player_history.py."
         )
 
     return actual[["player_id", "minutes", "total_points", "goals_scored", "assists",
@@ -63,9 +52,12 @@ def load_actual_results(gameweek: int) -> pd.DataFrame:
 
 
 def team_fixture_status(gameweek: int) -> dict[str, bool]:
-    """Maps each team_name -> whether their fixture in this gameweek has
-    finished. A player whose team hasn't played yet must not be scored
-    as if they'd already returned 0 — that's a pending result, not a fact.
+    """A fixture counts as 'done enough to review' once finished_provisional
+    is True — real scores are already in at that point. The strict
+    'finished' flag only flips after FPL's official bonus-point
+    confirmation pass, which can lag the final whistle by hours, so
+    relying on it alone would leave reviews stuck on 'pending' long
+    after a gameweek is actually over.
     """
     teams = pd.read_csv(DATA_PROCESSED_DIR / "teams.csv")
     fixtures = pd.read_csv(DATA_PROCESSED_DIR / "fixtures.csv")
@@ -77,10 +69,11 @@ def team_fixture_status(gameweek: int) -> dict[str, bool]:
     for _, row in gw_fixtures.iterrows():
         home_name = team_lookup.get(row["team_h"])
         away_name = team_lookup.get(row["team_a"])
+        is_done = bool(row.get("finished_provisional", row["finished"]))
         if home_name:
-            status[home_name] = bool(row["finished"])
+            status[home_name] = is_done
         if away_name:
-            status[away_name] = bool(row["finished"])
+            status[away_name] = is_done
 
     return status
 
@@ -95,15 +88,11 @@ def build_review(decision: pd.DataFrame, actual: pd.DataFrame, fixture_status: d
     review["actual_points_scored"] = review["total_points"]
     review["fixture_finished"] = review["team_name"].map(fixture_status).fillna(False)
 
-    # Prediction error only makes sense once the result is real — a player
-    # whose match hasn't happened yet isn't "wrong", they're just pending.
     review["prediction_error"] = review.apply(
         lambda r: (r["actual_points_scored"] - r["predicted_xPts"]) if r["fixture_finished"] else float("nan"),
         axis=1,
     )
 
-    # Captain's actual points count double when scoring the team total.
-    # Unplayed fixtures contribute 0 for now — they'll count once finished.
     review["points_toward_team_total"] = review.apply(
         lambda r: (r["actual_points_scored"] * 2 if r["is_captain"] else r["actual_points_scored"])
         if r["squad_role"] == "starting" and r["fixture_finished"] else 0,
@@ -113,9 +102,8 @@ def build_review(decision: pd.DataFrame, actual: pd.DataFrame, fixture_status: d
     return review
 
 
-def summarize(review: pd.DataFrame, gameweek: int) -> None:
+def summarize(review: pd.DataFrame, gameweek: int, version: str) -> dict:
     starting = review[review["squad_role"] == "starting"]
-
     finished = starting[starting["fixture_finished"]]
     pending = starting[~starting["fixture_finished"]]
 
@@ -127,20 +115,19 @@ def summarize(review: pd.DataFrame, gameweek: int) -> None:
     total_actual = finished["points_toward_team_total"].sum()
 
     print(f"\n{'='*72}")
-    print(f"GAMEWEEK {gameweek} REVIEW")
+    print(f"GAMEWEEK {gameweek} REVIEW — {version.upper()}")
     print(f"{'='*72}")
 
     if not pending.empty:
         pending_names = ", ".join(pending["web_name"])
-        print(f"⚠  {len(pending)} starter(s) haven't played yet — excluded from totals below: {pending_names}")
-        print(f"   Re-run this review once all GW{gameweek} fixtures are finished for a complete picture.\n")
+        print(f"⚠  {len(pending)} starter(s) haven't played yet — excluded from totals: {pending_names}\n")
 
     print(f"Predicted total so far ({len(finished)}/{len(starting)} starters played): {total_predicted:.2f}")
     print(f"Actual total so far:                                          {total_actual:.2f}")
     print(f"Difference: {total_actual - total_predicted:+.2f}")
 
     print(f"\n{'-'*72}")
-    print("STARTING XI — predicted vs actual (finished fixtures only)")
+    print(f"STARTING XI ({version.upper()}) — predicted vs actual (finished fixtures only)")
     print(f"{'-'*72}")
     display = finished.sort_values("actual_points_scored", ascending=False)
     for _, row in display.iterrows():
@@ -150,58 +137,43 @@ def summarize(review: pd.DataFrame, gameweek: int) -> None:
             f"actual={row['actual_points_scored']:>5.0f}  diff={row['prediction_error']:+.2f}"
         )
 
-    finished_all = review[review["fixture_finished"]]
-
-    print(f"\n{'-'*72}")
-    print("BIGGEST OVERPERFORMANCE (AI underrated them)")
-    print(f"{'-'*72}")
-    top_over = finished_all.sort_values("prediction_error", ascending=False).head(3)
-    for _, row in top_over.iterrows():
-        print(f"  {row['web_name']:<18} predicted={row['predicted_xPts']:.2f}  actual={row['actual_points_scored']:.0f}")
-
-    print(f"\n{'-'*72}")
-    print("BIGGEST UNDERPERFORMANCE (AI overrated them)")
-    print(f"{'-'*72}")
-    top_under = finished_all.sort_values("prediction_error", ascending=True).head(3)
-    for _, row in top_under.iterrows():
-        print(f"  {row['web_name']:<18} predicted={row['predicted_xPts']:.2f}  actual={row['actual_points_scored']:.0f}")
-
-    bench_finished = finished_all[finished_all["squad_role"] == "bench"]
-    starting_finished = finished_all[finished_all["squad_role"] == "starting"]
-    if not bench_finished.empty and not starting_finished.empty:
-        best_bench = bench_finished.loc[bench_finished["actual_points_scored"].idxmax()]
-        worst_starter = starting_finished.loc[starting_finished["actual_points_scored"].idxmin()]
-        if best_bench["actual_points_scored"] > worst_starter["actual_points_scored"]:
-            print(f"\n{'-'*72}")
-            print("SELECTION MISS")
-            print(f"{'-'*72}")
-            print(
-                f"  Bench player {best_bench['web_name']} scored {best_bench['actual_points_scored']:.0f} pts "
-                f"— more than starter {worst_starter['web_name']} ({worst_starter['actual_points_scored']:.0f} pts)."
-            )
-
     print(f"{'='*72}\n")
 
+    return {
+        "version": version,
+        "gameweek": gameweek,
+        "total_predicted": total_predicted,
+        "total_actual": total_actual,
+        "starters_finished": len(finished),
+        "starters_total": len(starting),
+        "fully_complete": len(pending) == 0,
+    }
 
-def run(gameweek: int) -> pd.DataFrame:
-    decision = load_decision(gameweek)
+
+def run(gameweek: int, version: str) -> pd.DataFrame:
+    decision = load_decision(gameweek, version)
     actual = load_actual_results(gameweek)
     fixture_status = team_fixture_status(gameweek)
     review = build_review(decision, actual, fixture_status)
 
-    out_path = DECISIONS_DIR / f"gw{gameweek}_review.csv"
+    out_path = DECISIONS_DIR / f"gw{gameweek}_review_{version}.csv"
     review.to_csv(out_path, index=False)
     logger.info("Saved detailed review to %s", out_path)
 
-    summarize(review, gameweek)
+    summary = summarize(review, gameweek, version)
+
+    summary_path = DECISIONS_DIR / f"gw{gameweek}_summary_{version}.csv"
+    pd.DataFrame([summary]).to_csv(summary_path, index=False)
+
     return review
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Review a completed Gameweek's AI decision vs actual results.")
+    parser = argparse.ArgumentParser(description="Review a completed Gameweek's decision vs actual results.")
     parser.add_argument("--gameweek", type=int, required=True)
+    parser.add_argument("--version", default="v1")
     args = parser.parse_args()
-    run(args.gameweek)
+    run(args.gameweek, args.version)
 
 
 if __name__ == "__main__":
