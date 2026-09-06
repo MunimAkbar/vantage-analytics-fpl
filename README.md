@@ -1,4 +1,4 @@
-# Vantage Analytics — AI-Powered Fantasy Premier League
+# Vantage Analytics — AI-Powered Fantasy Premier League (FPL)
 
 An autonomous FPL decision-making system that manages its own team for a full
 Premier League season, competing head-to-head against a human-managed team.
