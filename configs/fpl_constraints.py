@@ -17,3 +17,9 @@ VALID_FORMATIONS = [
 ]
 
 MAX_PLAYERS_PER_CLUB = 3
+
+# Transfer rules (2024/25 season onward — confirmed via official FPL rule change
+# announcements: banked free transfers raised from 2 to 5 that season).
+FREE_TRANSFERS_PER_GAMEWEEK = 1
+MAX_BANKED_FREE_TRANSFERS = 5
+TRANSFER_HIT_COST = 4  # points deducted per transfer beyond the free allowance
