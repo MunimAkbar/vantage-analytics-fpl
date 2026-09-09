@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import logging
 
+# pyrefly: ignore [missing-import]
 import joblib
 import pandas as pd
 
