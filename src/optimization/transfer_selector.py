@@ -28,7 +28,18 @@ def select_squad_with_transfers(
     max_per_club: int = MAX_PLAYERS_PER_CLUB,
     hit_cost: float = TRANSFER_HIT_COST,
     name_col: str = "name",
+    max_hits: int | None = 2,
 ) -> tuple[pd.DataFrame, int, int]:
+    """Solves the transfer-constrained squad selection ILP.
+
+    max_hits caps the number of paid transfers (hits) the solver is
+    allowed to recommend in a single week. Without this, the ILP can
+    legally decide that tearing up 8 players for a +2 xPts gain is
+    worthwhile — technically correct per the objective but completely
+    unrealistic for a real FPL manager. Default of 2 reflects the
+    practical maximum any rational manager would consider in one week.
+    Set to None to remove the cap (used in backtesting only).
+    """
     players = predictions.reset_index(drop=True)
     n = len(players)
 
@@ -42,6 +53,8 @@ def select_squad_with_transfers(
 
     hits = pulp.LpVariable("hits", lowBound=0, cat="Continuous")
     prob += hits >= transfers_out_expr - free_transfers
+    if max_hits is not None:
+        prob += hits <= max_hits
 
     prob += pulp.lpSum(select[i] * players.loc[i, "xPts"] for i in range(n)) - hit_cost * hits
     prob += pulp.lpSum(select[i] * players.loc[i, "now_cost"] for i in range(n)) <= budget
