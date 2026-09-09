@@ -25,8 +25,7 @@ import argparse
 import logging
 
 import pandas as pd
-# pyrefly: ignore [missing-import]
-import pulp
+from src.optimization.transfer_selector import select_squad_with_transfers
 
 from configs.fpl_constraints import (
     FREE_TRANSFERS_PER_GAMEWEEK,
@@ -49,7 +48,7 @@ from src.optimization.squad_selector import select_squad
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
-
+"""
 def select_squad_with_transfers(
     predictions: pd.DataFrame,
     old_squad_names: set[str],
@@ -100,7 +99,7 @@ def select_squad_with_transfers(
 
     return new_squad, transfers_made, hits_taken
 
-
+"""
 def simulate_season(season: str) -> pd.DataFrame:
     model, feature_columns = load_model()
     season_df = load_season_features(season)
