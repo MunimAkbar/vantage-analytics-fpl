@@ -9,6 +9,7 @@ transfer). Shared by both backtest_v2_transfers.py and suggest_transfers.py.
 from __future__ import annotations
 
 import pandas as pd
+# pyrefly: ignore [missing-import]
 import pulp
 
 from configs.fpl_constraints import (
