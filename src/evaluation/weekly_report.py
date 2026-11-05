@@ -16,7 +16,7 @@ import pandas as pd
 
 from src.cleaning.utils import DATA_PROCESSED_DIR
 from src.evaluation import gameweek_review
-from src.evaluation.suggest_transfers import find_latest_locked_squad, load_live_predictions
+from src.evaluation.suggest_transfers import load_current_squad, load_live_predictions
 from src.optimization.transfer_selector import select_squad_with_transfers
 
 logging.basicConfig(level=logging.WARNING)
@@ -70,9 +70,10 @@ def run(completed_gameweek: int, version: str, free_transfers: int) -> None:
         print("Run the predict step for next week's gameweek first, then re-run this report.")
         return
 
-    _, old_squad_names = find_latest_locked_squad(version)
+    _, old_squad_names, budget, source = load_current_squad(version)
+    print(f"(Starting from {source}; budget £{budget:.1f}m)")
     new_squad, transfers_made, hits_taken = select_squad_with_transfers(
-        predictions, old_squad_names, free_transfers, name_col="name",
+        predictions, old_squad_names, free_transfers, name_col="name", budget=budget,
     )
 
     ranked = new_squad.sort_values("xPts", ascending=False)
