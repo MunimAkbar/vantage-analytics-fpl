@@ -73,6 +73,18 @@ def load_current_squad(version: str) -> tuple[int, set[str], float, str]:
     return gw, locked_names, SQUAD_BUDGET, f"the locked GW{gw} decision"
 
 
+def next_gameweek_from_calendar() -> int | None:
+    """The real upcoming gameweek (is_next in gameweeks.csv), or None if it can't be read."""
+    path = DATA_PROCESSED_DIR / "gameweeks.csv"
+    if not path.exists():
+        return None
+    gws = pd.read_csv(path)
+    nxt = gws[gws["is_next"] == True]  # noqa: E712
+    if nxt.empty:
+        return None
+    return int(nxt["gameweek_id"].iloc[0])
+
+
 def load_live_predictions(version: str) -> pd.DataFrame:
     path = DATA_PROCESSED_DIR / f"predictions_{version}.csv"
     if not path.exists():
@@ -137,7 +149,11 @@ def suggest(version: str, free_transfers: int, current_gameweek: int | None, bud
 
     print(f"{'='*70}\n")
 
-    out_path = DECISIONS_DIR / f"gw{current_gameweek + 1}_transfer_suggestion_{version}.csv"
+    target_gw = next_gameweek_from_calendar()
+    if target_gw is None:
+        target_gw = current_gameweek + 1
+        logger.warning("No is_next gameweek in gameweeks.csv; naming the file GW%d (last lock + 1).", target_gw)
+    out_path = DECISIONS_DIR / f"gw{target_gw}_transfer_suggestion_{version}.csv"
     new_squad.to_csv(out_path, index=False)
     logger.info("Saved suggested squad to %s (review only — nothing locked).", out_path)
 
