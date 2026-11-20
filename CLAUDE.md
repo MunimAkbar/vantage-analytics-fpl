@@ -152,8 +152,9 @@ old, unversioned `gw3_review.csv`.
 
 `data/records/` (committed) holds `gw10_ai_transfer_suggestion.csv`,
 `gw10_synced_squad_pre_transfers.csv`, and `gw11_ai_transfer_suggestion.csv`.
-The GW11 copy there was made before the GW10 player history was fetched; the
-transfer is the same, but its xPts are older than the lock's.
+`gw11_decision_v1.csv` is a copy of the GW11 lock. The GW11 suggestion copy is
+the final run (after the GW10 player history was fetched); its xPts match the
+lock.
 
 The local venv was rebuilt on 20 Nov on Python 3.13 (the old Anaconda base was
 removed), with the same package versions as before: pandas 3.0.5, numpy
