@@ -1,0 +1,16 @@
+gameweek,model_version,decision_timestamp_utc,player_id,web_name,team_name,position,now_cost,predicted_xPts,squad_role,is_captain,is_vice_captain
+11,v1,2026-11-20T18:29:17.174120+00:00,112,Van Hecke,Spurs,DEF,5.1,5.07,starting,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,115,De Cuyper,Brighton,DEF,5.5,4.82,starting,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,330,Bogle,Leeds,DEF,4.8,4.17,starting,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,305,Davis,Ipswich Town,DEF,4.0,3.54,bench,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,533,Mukiele,Sunderland,DEF,5.3,2.88,bench,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,249,Barry,Everton,FWD,5.7,6.07,starting,True,False
+11,v1,2026-11-20T18:29:17.174120+00:00,79,Evanilson,Bournemouth,FWD,6.5,5.84,starting,False,True
+11,v1,2026-11-20T18:29:17.174120+00:00,411,Haaland,Man City,FWD,15.8,4.95,starting,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,110,Rushworth,Coventry City,GK,4.5,3.37,starting,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,109,Verbruggen,Brighton,GK,4.7,3.29,bench,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,68,Tavernier,Bournemouth,MID,6.7,5.53,starting,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,542,E.Le Fée,Sunderland,MID,5.7,4.72,starting,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,427,Mbeumo,Man Utd,MID,7.9,4.61,starting,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,480,Gibbs-White,Nott'm Forest,MID,7.8,4.6,starting,False,False
+11,v1,2026-11-20T18:29:17.174120+00:00,40,Rogers,Chelsea,MID,8.2,4.1,bench,False,False
