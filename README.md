@@ -1,16 +1,16 @@
 # Vantage Analytics — Autonomous AI Fantasy Premier League (FPL) Engine
 
-An autonomous FPL decision-making system that manages its own squad for a full Premier League season, competing head-to-head against a human-managed team with **zero manual intervention**.
+An FPL decision-making system that manages a real squad for the full 2026-27 Premier League season, competing head-to-head against a human-managed team. The AI makes the decisions (transfers, starting XI, captain); the owner copies them into a real FPL account by hand, because FPL has no public API for making transfers.
 
 > **The Experiment:** Can a strictly leak-free, data-driven pipeline — combining predictive modeling, integer linear programming (ILP), and walk-forward validation — outperform an experienced human FPL manager over 38 Gameweeks?
 >
-> 📌 **Live Season Status:** Active in season — **GW4 in progress** (decisions locked pre-deadline for V1 and V2 head-to-head).
+> 📌 **Live Season Status (20 Nov 2026):** **GW11 locked** before the deadline (V1). Every result is reported below, including the misses. This is an experiment, not betting or FPL advice.
 
 ---
 
 ## 🏗️ System Design & Architecture
 
-The system operates as an end-to-end modular pipeline. Each module in [`src/`](file:///d:/WorkANDProjects/vantage-analytics/src) is decoupled, independently testable, and enforced by strict **time-based validation** (no lookahead data leakage).
+The system operates as an end-to-end modular pipeline. Each module in [`src/`](src) is decoupled, independently testable, and enforced by strict **time-based validation** (no lookahead data leakage).
 
 ```
    +-----------------------------------------------------------------------+
@@ -62,8 +62,10 @@ The system operates as an end-to-end modular pipeline. Each module in [`src/`](f
                                        |
                                        v
    +-----------------------------------------------------------------------+
-   |                   ORCHESTRATION (scripts/run_gameweek.py)              |
-   |  - Single-command end-to-end execution: Fetch -> Predict -> Lock      |
+   |                  WEEKLY DECISION TOOLS (src/evaluation/)               |
+   |  - sync_squad.py: snapshot of the squad held in the real FPL account  |
+   |  - suggest_transfers.py: transfer ILP from the real squad (FTs, hits) |
+   |  - lock_squad.py: picks XI/C/VC, locks only before the deadline       |
    +-----------------------------------------------------------------------+
 ```
 
@@ -86,16 +88,22 @@ The system operates as an end-to-end modular pipeline. Each module in [`src/`](f
 
 ---
 
-## 📈 Live Season Performance & Audit Tracker (Up to GW4)
+## 📈 Live Season Record (up to GW11)
 
-All AI decisions are written to disk *before* each Gameweek deadline and cannot be altered retrospectively.
+A locked decision is written to disk *before* the gameweek deadline and is never edited afterwards. Weeks without a lock are listed too, with the reason. Predicted points are the starting XI plus the captain's double.
 
-| Gameweek | Model Version | Status | Predicted Points | Actual Points | Notes / Performance Highlights |
+| Gameweek | Model | Status | Predicted | Actual | Notes |
 | :--- | :--- | :--- | :---: | :---: | :--- |
-| **GW3** | V1 Baseline | ✅ Reviewed | **92.03** | **56.00** | First live reviewed week. Over-predicted top picks (Fernandes, Mbeumo C/VC) while budget picks (Isak) delivered. Highlighted short-term form over-extrapolation in V1. |
-| **GW4** | V1 Baseline | 🔒 Locked | 88.42 | *In Progress* | Squad locked pre-deadline. Captain: Fernandes, VC: Mbeumo. |
-| **GW4** | V2 Ridge ML | 🔒 Locked | 54.10 | *In Progress* | First live head-to-head test. Squad locked pre-deadline. Captain: Haaland, VC: Salah. |
-| **GW5** | V1 & V2 | ⏳ Pending | - | - | Transfer suggestions generated via [`suggest_transfers.py`](file:///d:/WorkANDProjects/vantage-analytics/src/evaluation/suggest_transfers.py). |
+| **GW3** | V1 | ✅ Locked & reviewed | 92.03 | 56 | Captain Fernandes and VC Mbeumo both flopped. Showed V1 over-extrapolating recent form. |
+| **GW4** | V1 | ✅ Locked & reviewed | 75.26 | 52 | Same captain and VC flopped again. |
+| **GW4** | V2 | ✅ Locked & reviewed | 42.89 | 42 | First V2 lock. Captain Hinshelwood, VC Mundle. Closest prediction so far. |
+| **GW5** | — | Not locked | — | — | International break. |
+| **GW6** | V1 | 🔒 Locked | 69.34 | — | The real account differed from the lock in 5 players, so not a clean AI week. |
+| **GW7–9** | — | Not locked | — | ~50 (GW9) | The account played the synced squad without new locks. |
+| **GW10** | V1 (advised) | Not locked | — | 70 | The lock was never confirmed. The 3 suggested transfers and the suggested captain (Barry) were played. AI-advised, not a locked AI decision. |
+| **GW11** | V1 | 🔒 Locked | 59.82 | *pending* | Suspended Thiago → Evanilson (1 free transfer, no hit). Captain Barry, VC Evanilson. |
+
+Records the experiment needs to keep are copied to [`data/records/`](data/records).
 
 ---
 
@@ -105,8 +113,8 @@ To evaluate the predictive and decision engine under realistic constraints, we r
 
 | Strategy / Model Configuration | Total Points | Avg Pts / GW | Total Transfers | Hits Taken | Key Insights |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **V2 Unconstrained Rebuild** ([`backtest_v2.py`](file:///d:/WorkANDProjects/vantage-analytics/src/evaluation/backtest_v2.py)) | **2,260** | 59.47 | N/A (Free weekly reset) | 0 | Upper bound showing the raw power of V2 predictions when unrestricted by squad carrying rules. |
-| **V2 Realistic Transfers** ([`backtest_v2_transfers.py`](file:///d:/WorkANDProjects/vantage-analytics/src/evaluation/backtest_v2_transfers.py)) | **1,760** | 46.32 | 47 | 9 (-36 pts) | Uses 1 Free Transfer/GW (banking up to 5) and -4 hit costs. Demonstrates that 1-week greedy transfer logic falls short of top human managers (~2000+ pts), establishing the need for multi-GW lookahead. |
+| **V2 Unconstrained Rebuild** ([`backtest_v2.py`](src/evaluation/backtest_v2.py)) | **2,260** | 59.47 | N/A (Free weekly reset) | 0 | Upper bound showing the raw power of V2 predictions when unrestricted by squad carrying rules. |
+| **V2 Realistic Transfers** ([`backtest_v2_transfers.py`](src/evaluation/backtest_v2_transfers.py)) | **1,760** | 46.32 | 47 | 9 (-36 pts) | Uses 1 Free Transfer/GW (banking up to 5) and -4 hit costs. Demonstrates that 1-week greedy transfer logic falls short of top human managers (~2000+ pts), establishing the need for multi-GW lookahead. |
 
 ---
 
@@ -119,10 +127,11 @@ vantage-analytics/
 │   └── fpl_scoring.py          # Position-weighted scoring rules (goals, CS, cards, bonus)
 ├── data/
 │   ├── raw/                    # Gitignored raw API responses & archives
-│   └── processed/              # Cleaned CSVs, predictions, decision audit logs
+│   ├── processed/              # Gitignored cleaned CSVs, predictions, decision locks
+│   └── records/                # Committed copies of suggestions and squads kept for the record
 ├── models/                     # Saved ML model artifacts (e.g. xpts_v2_ridge.joblib)
 ├── scripts/
-│   └── run_gameweek.py         # End-to-end gameweek pipeline orchestrator
+│   └── run_gameweek.py         # Legacy: builds a fresh squad; predates the real-squad workflow
 ├── src/
 │   ├── ingestion/              # FPL API & historical archive fetchers
 │   │   ├── fetch_fpl_data.py   # Live API pull with --player-history option
@@ -147,7 +156,9 @@ vantage-analytics/
 │       ├── decision_log.py     # Timestamped decision audit snapshots
 │       ├── gameweek_review.py  # Post-GW performance & actual vs predicted metrics
 │       ├── compare_models.py   # V1 vs V2 head-to-head comparison logger
-│       ├── suggest_transfers.py# Recommended transfers for upcoming GWs
+│       ├── sync_squad.py       # Snapshot of the real account squad (not a lock)
+│       ├── suggest_transfers.py# Transfer suggestion for the next GW from the real squad
+│       ├── lock_squad.py       # Pre-deadline XI/captain lock, confirmed by typing LOCK
 │       ├── backtest_v2.py      # Unconstrained full-season historical simulation
 │       ├── backtest_v2_transfers.py # Realistic transfer-constrained simulation
 │       ├── show_squad.py       # Terminal UI for viewing active squad/XI
@@ -170,50 +181,56 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Run Complete Gameweek Cycle (Single Command)
-To run the full end-to-end pipeline (fetch data, clean, calculate features, predict V1/V2, optimize squads, and lock pre-deadline decisions for a gameweek):
+### 2. Refresh Data and Predictions (the day before a deadline)
 
 ```bash
-python -m scripts.run_gameweek --gw 4
-```
-
-### 3. Step-by-Step Manual Execution
-
-```bash
-# 1. Ingest live FPL data
+# Fetch live FPL data. --player-history is required: without it, recent form stops at the last run.
 python -m src.ingestion.fetch_fpl_data --player-history
 
-# 2. Clean data and build features
+# Clean data and build features
 python -m src.cleaning.run_cleaning
 python -m src.cleaning.clean_player_history
 python -m src.features.build_features
 
-# 3. Train or Run Predictions
+# Predict
 python -m src.models.xpts_v1
-python -m src.models.xpts_v2 --train      # Train Ridge model on historical dataset
-python -m src.models.xpts_v2 --predict    # Generate V2 predictions
+python -m src.models.xpts_v2 --predict    # optional; --train retrains the Ridge model on history
+```
 
-# 4. Optimize Squad & Lineup
-python -m src.optimization.squad_selector --version v2
-python -m src.optimization.lineup_selector --version v2
+### 3. Weekly Decision Routine (real squad)
 
-# 5. Lock Pre-Deadline Decision Snapshot
-python -m src.evaluation.decision_log --lock --gw 4 --version v2
+```bash
+# 1. Write the squad held in the app to data/processed/account_squad.txt
+#    (one player per line: name, price, club), then snapshot it.
+#    --budget is squad sell value plus money in the bank.
+python -m src.evaluation.sync_squad --budget 100.4
+
+# 2. Suggest transfers; set --free-transfers to what the app shows
+python -m src.evaluation.suggest_transfers --version v1 --free-transfers 1
+
+# 3. Make the transfers in the app, update account_squad.txt, then sync again
+python -m src.evaluation.sync_squad --budget 100.4
+
+# 4. Lock the XI, captain and VC (asks you to type LOCK; refuses after the deadline)
+python -m src.evaluation.lock_squad --gameweek 11
+
+# 5. Show the locked squad, then set the same lineup in the app
+python -m src.evaluation.show_squad
 ```
 
 ### 4. Review & Analytics Commands
 
 ```bash
-# Evaluate Gameweek results after matches complete
-python -m src.evaluation.gameweek_review --gw 3 --version v1
+# Evaluate a gameweek after its matches finish
+python -m src.evaluation.gameweek_review --gameweek 10 --version v1
 
-# Run Head-to-Head Model Comparison
-python -m src.evaluation.compare_models --gw 4
+# Review last week and preview next week's captain and transfers
+python -m src.evaluation.weekly_report --completed-gameweek 10 --version v1 --free-transfers 1
 
-# Suggest Transfers for Next Gameweek
-python -m src.evaluation.suggest_transfers --gw 5 --version v2
+# V1 vs V2 head-to-head
+python -m src.evaluation.compare_models --gameweek 4
 
-# Run Full Historical Season Backtest (2024-25)
+# Full historical season backtest with real transfer rules
 python -m src.evaluation.backtest_v2_transfers
 ```
 
@@ -224,7 +241,8 @@ python -m src.evaluation.backtest_v2_transfers
 1. **Zero Data Leakage:** Every feature for Gameweek $N$ strictly uses information known *before* Gameweek $N$'s deadline (`.shift(1)` rolling logic).
 2. **Season-Based Walk-Forward Validation:** No random train/test splits. ML models are trained strictly on past seasons (2020–23) and evaluated on held-out seasons (2024-25).
 3. **Constrained ILP Optimization:** Squad selection, transfer decisions, and tactical lineups use Integer Linear Programming (`PuLP`), guaranteeing strictly valid FPL rules rather than simple top-N sorting.
-4. **Full Pre-Deadline Auditability:** AI team choices are written to immutable timestamped CSV/JSON files before kickoff, preventing post-hoc hindsight bias.
+4. **Full Pre-Deadline Auditability:** AI team choices are written to timestamped CSV files before the deadline and are never overwritten (`FileExistsError`), preventing post-hoc hindsight bias.
+5. **Honest Reporting:** Bad weeks and weeks without a clean lock stay in the record.
 
 ---
 

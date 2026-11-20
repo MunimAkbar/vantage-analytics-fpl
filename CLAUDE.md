@@ -2,7 +2,7 @@
 
 Read this whole file before doing anything. It covers the project's history,
 its rules, its current state, and what to do next. Last updated 20 Nov 2026,
-the week before Gameweek 11 of the 2026-27 Premier League season.
+after GW11 was locked (deadline Sat 21 Nov 11:00 UTC), 2026-27 season.
 
 Repo: https://github.com/MunimAkbar/vantage-analytics-fpl (public)
 The owner works on Windows, in PowerShell, with a Python venv, at
@@ -67,8 +67,9 @@ Configs:
 - `configs/fpl_scoring.py`: points by position.
 - `configs/fpl_constraints.py`: budget 100.0, positions, formations, max 3 per
   club, 1 free transfer a week, up to 5 banked, -4 per extra transfer.
-- `configs/manual_overrides.py`: forces `p_start` for injured players the API
-  hasn't flagged yet. Applied inside `build_features.py`.
+- `configs/manual_overrides.py`: planned, **does not exist yet** (see section
+  7). Meant to force `p_start` for injured players the API hasn't flagged yet,
+  applied inside `build_features.py`. Until then, check flagged players by eye.
 
 Two data gotchas already handled:
 - FPL's `finished` flag lags results by hours. Use `finished_provisional`.
@@ -113,9 +114,15 @@ Two data gotchas already handled:
 
 The routine, the day before a deadline:
 
-1. Fetch, clean, `build_features`, `xpts_v1`.
-2. Check `gameweeks.csv` shows the right `is_next` gameweek.
-3. Update `account_squad.txt` to match the app, then run `sync_squad`.
+1. Fetch **with `--player-history`**, clean, `build_features`, `xpts_v1`.
+   Without the flag, the per-player history files aren't refreshed and recent
+   form stops at the last full fetch (this happened before GW11). The full
+   fetch takes about 20 minutes.
+2. Check `gameweeks.csv` shows the right `is_next` gameweek, and that the
+   maximum `gameweek_id` in `player_history.csv` is the gameweek just played.
+3. Update `account_squad.txt` to match the app (`name, price, club`, sell
+   prices from the app), save it, then run `sync_squad`. The sync reads only
+   this file, so check its output lists the app's players.
 4. Run `suggest_transfers` with the free-transfer count from the app.
 5. Make the transfers in the app, update `account_squad.txt`, run `sync_squad`
    again.
@@ -132,35 +139,44 @@ The routine, the day before a deadline:
 | 5 | Nothing locked (international break). |
 | 6 | V1 locked, but the real account differed in 5 players. Not a clean AI week. |
 | 7-9 | Nothing locked. The account played the synced squad. GW9 scored about 50. |
-| 10 | Not locked: the LOCK prompt was never confirmed. The owner made the 3 suggested transfers and played the suggested captain (Barry, 32 points). The real account scored 70. Treat it as AI-advised, not a locked AI decision. |
+| 10 | Not locked: the LOCK prompt was never confirmed. The owner made the 3 suggested transfers (Van Hecke, Tavernier, Gibbs-White in for Mitchell, Lewis-Potter, Gross) and played the suggested captain (Barry, 32 points). The real account scored 70. Treat it as AI-advised, not a locked AI decision. |
+| 11 | V1 locked 20 Nov 18:29 UTC, about 16.5h before the deadline. Transfer: Thiago (suspended until 5 Dec) out, Evanilson in, 1 FT, no hit. Captain Barry, VC Evanilson, 3-4-3. Predicted 59.82 (XI + captain). The lock matches the real account squad. Budget 100.4, bank 3.6 after the transfer. |
 
-Files in `data/processed/decisions/` as of 10 Nov: `current_squad.csv`;
-`gw3_decision_v1`, `gw3_review_v1`, `gw3_summary_v1`; `gw4_decision_v1`,
-`gw4_decision_v2`, with reviews and summaries for both; `gw5_transfer_suggestion_v1`;
-`gw6_decision_v1`; `gw7_transfer_suggestion_v1`. There is also an old,
-unversioned `gw3_review.csv`.
+Files in `data/processed/decisions/` as of 20 Nov: `current_squad.csv`
+(synced 20 Nov, includes Evanilson); `gw3_decision_v1`, `gw3_review_v1`,
+`gw3_summary_v1`; `gw4_decision_v1`, `gw4_decision_v2`, with reviews and
+summaries for both; `gw5_transfer_suggestion_v1`; `gw6_decision_v1`;
+`gw7_transfer_suggestion_v1` (actually the GW10 suggestion, from the old naming
+rule); `gw11_transfer_suggestion_v1`; `gw11_decision_v1`. There is also an
+old, unversioned `gw3_review.csv`.
 
-`gw7_transfer_suggestion_v1.csv` is actually the GW10 suggestion, because
-suggestion files are numbered last lock + 1. Copy it to `data/records/` (not
-gitignored) before the next suggestion run overwrites it.
-`current_squad.csv` was re-synced on 10 Nov, so the pre-transfer GW10 version
-is gone.
+`data/records/` (committed) holds `gw10_ai_transfer_suggestion.csv`,
+`gw10_synced_squad_pre_transfers.csv`, and `gw11_ai_transfer_suggestion.csv`.
+The GW11 copy there was made before the GW10 player history was fetched; the
+transfer is the same, but its xPts are older than the lock's.
+
+The local venv was rebuilt on 20 Nov on Python 3.13 (the old Anaconda base was
+removed), with the same package versions as before: pandas 3.0.5, numpy
+2.5.2, scikit-learn 1.9.0 (the version `xpts_v2_ridge.joblib` was saved
+with), pulp 3.3.2.
 
 ## 7. Known problems, roughly in priority order
 
-1. `requirements.txt` must pin `pulp>=2.7,<4`. PuLP 4.x changed its API and
-   breaks every optimizer.
-2. Suggestion files are named after the last lock + 1, not the real upcoming
-   gameweek. Name them from `is_next` in `gameweeks.csv`.
-3. `scripts/run_gameweek.py` predates the sync and lock workflow. It rebuilds a
-   fresh squad and locks it, which is wrong now that a real squad exists.
-   Update it to call the new workflow, or remove it.
-4. `lock_squad.py` was patched to print the deadline in the PC's local time
-   instead of a hard-coded IST. Confirm the patch is in the file.
-5. `weekly_report.py` was edited to use `load_current_squad()` and the synced
-   budget. Confirm the edit is in the file.
-6. `build_features.py` should contain `next_n_fixtures_difficulty` and
-   `apply_manual_overrides`. Older copies don't. Confirm.
+Checked against the files on 20 Nov:
+
+1. Done: `requirements.txt` pins `pulp>=2.7,<4` (PuLP 4.x breaks every
+   optimizer).
+2. Done: `suggest_transfers.py` names suggestion files from `is_next` in
+   `gameweeks.csv`, falling back to last lock + 1 with a warning.
+3. **Open:** `scripts/run_gameweek.py` predates the sync and lock workflow. It
+   rebuilds a fresh squad and locks it, which is wrong now that a real squad
+   exists. Update it to call the new workflow, or remove it. The README marks
+   it as legacy.
+4. Done: `lock_squad.py` prints the deadline in the PC's local time.
+5. Done: `weekly_report.py` uses `load_current_squad()` and the synced budget.
+6. Half done: `build_features.py` has `next_n_fixtures_difficulty`, but
+   **`apply_manual_overrides` and `configs/manual_overrides.py` don't exist.**
+   Build them before relying on overrides.
 7. Budget is simplified: one flat number per week. FPL's sell-price rule (you
    keep half of a price rise) isn't modelled.
 8. Chips (wildcard, free hit, bench boost, triple captain) aren't modelled.
@@ -172,8 +188,9 @@ these changes. Code given in chat has sometimes not been saved to disk.
 
 ## 8. What to do next
 
-**First, GW11.** Read the deadline from `gameweeks.csv` and run the routine in
-section 5. Nothing below should get in its way.
+**First, the weekly routine.** GW11 is locked. After GW11 finishes, run
+`gameweek_review` for GW11 (the first clean lock since GW4), then run the
+routine in section 5 for GW12. Nothing below should get in its way.
 
 **Then the public app**, in this order:
 
