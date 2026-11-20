@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import argparse
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pandas as pd
 
@@ -37,8 +37,6 @@ logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 VERSION = "v1"
-IST_OFFSET = timedelta(hours=5, minutes=30)
-
 
 def check_gameweek_and_deadline(gameweek: int, skip_checks: bool) -> None:
     path = DATA_PROCESSED_DIR / "gameweeks.csv"
@@ -75,7 +73,8 @@ def check_gameweek_and_deadline(gameweek: int, skip_checks: bool) -> None:
         print("  ⚠ --skip-checks given: continuing anyway.")
 
     hours = (deadline - now).total_seconds() / 3600
-    print(f"GW{gameweek} deadline: {deadline:%a %d %b %H:%M} UTC / {deadline + IST_OFFSET:%a %d %b %H:%M} IST"
+    local = deadline.tz_convert(datetime.now().astimezone().tzinfo)  # this PC's own time zone
+    print(f"GW{gameweek} deadline: {deadline:%a %d %b %H:%M} UTC / {local:%a %d %b %H:%M} your local time (UTC{local:%z})"
           f"  ({hours:.1f}h from now)")
 
 
