@@ -1,8 +1,9 @@
 # Vantage Analytics: context for Claude Code
 
 Read this whole file before doing anything. It covers the project's history,
-its rules, its current state, and what to do next. Last updated 20 Nov 2026,
-after GW11 was locked (deadline Sat 21 Nov 11:00 UTC), 2026-27 season.
+its rules, its current state, and what to do next. Last updated 27 Nov 2026,
+after GW12 was locked (deadline Fri 27 Nov 18:30 UTC), 2026-27 season.
+**GW13 is midweek: deadline Tue 1 Dec 18:30 UTC (23:30 Pakistan time).**
 
 Repo: https://github.com/MunimAkbar/vantage-analytics-fpl (public)
 The owner works on Windows, in PowerShell, with a Python venv, at
@@ -140,10 +141,12 @@ The routine, the day before a deadline:
 | 6 | V1 locked, but the real account differed in 5 players. Not a clean AI week. |
 | 7-9 | Nothing locked. The account played the synced squad. GW9 scored about 50. |
 | 10 | Not locked: the LOCK prompt was never confirmed. The owner made the 3 suggested transfers (Van Hecke, Tavernier, Gibbs-White in for Mitchell, Lewis-Potter, Gross) and played the suggested captain (Barry, 32 points). The real account scored 70. Treat it as AI-advised, not a locked AI decision. |
-| 11 | V1 locked 20 Nov 18:29 UTC, about 16.5h before the deadline. Transfer: Thiago (suspended until 5 Dec) out, Evanilson in, 1 FT, no hit. Captain Barry, VC Evanilson, 3-4-3. Predicted 59.82 (XI + captain). The lock matches the real account squad. Budget 100.4, bank 3.6 after the transfer. |
+| 11 | V1 locked 20 Nov 18:29 UTC, about 16.5h before the deadline. Transfer: Thiago (suspended until 5 Dec) out, Evanilson in, 1 FT, no hit. Captain Barry, VC Evanilson, 3-4-3. Predicted 59.82 (XI + captain). The lock matches the real account squad. Budget 100.4, bank 3.6 after the transfer. **Actual 39** (review: Tavernier 8 best; Barry (C), Haaland, Gibbs-White, Rushworth 2 each). Human team scored 44. |
+| 12 | V1 locked 27 Nov 18:05 UTC, only 25 min before the deadline (the routine was started late). Transfer: Mbeumo out, Barcola (Liverpool, 8.1) in, 1 FT, no hit. Captain Tavernier, VC Evanilson, 3-4-3. Predicted 62.56. Davis on the bench with a calf knock (75%). The lock matches the real account squad. Budget 100.4. |
 
-Files in `data/processed/decisions/` as of 20 Nov: `current_squad.csv`
-(synced 20 Nov, includes Evanilson); `gw3_decision_v1`, `gw3_review_v1`,
+Files in `data/processed/decisions/` as of 27 Nov: `current_squad.csv`
+(synced 27 Nov, includes Barcola); `gw11_review_v1`, `gw11_summary_v1`;
+`gw12_transfer_suggestion_v1`, `gw12_decision_v1`; `gw3_decision_v1`, `gw3_review_v1`,
 `gw3_summary_v1`; `gw4_decision_v1`, `gw4_decision_v2`, with reviews and
 summaries for both; `gw5_transfer_suggestion_v1`; `gw6_decision_v1`;
 `gw7_transfer_suggestion_v1` (actually the GW10 suggestion, from the old naming
@@ -154,7 +157,11 @@ old, unversioned `gw3_review.csv`.
 `gw10_synced_squad_pre_transfers.csv`, and `gw11_ai_transfer_suggestion.csv`.
 `gw11_decision_v1.csv` is a copy of the GW11 lock. The GW11 suggestion copy is
 the final run (after the GW10 player history was fetched); its xPts match the
-lock.
+lock. Added 27 Nov: `gw11_review_v1.csv`, `gw11_summary_v1.csv`,
+`gw12_ai_transfer_suggestion.csv`, `gw12_decision_v1.csv`.
+
+Human team points are only noted in the record table so far (GW11: 44). A
+committed `data/records/human_vs_ai.csv` is planned but not started.
 
 The local venv was rebuilt on 20 Nov on Python 3.13 (the old Anaconda base was
 removed), with the same package versions as before: pandas 3.0.5, numpy
@@ -189,9 +196,11 @@ these changes. Code given in chat has sometimes not been saved to disk.
 
 ## 8. What to do next
 
-**First, the weekly routine.** GW11 is locked. After GW11 finishes, run
-`gameweek_review` for GW11 (the first clean lock since GW4), then run the
-routine in section 5 for GW12. Nothing below should get in its way.
+**First, the weekly routine.** GW12 is locked. After GW12 finishes, run
+`gameweek_review --gameweek 12`, then run the routine in section 5 for GW13.
+GW13 is midweek (deadline Tue 1 Dec 18:30 UTC), so there are only about 4 days
+between deadlines. Start the routine early on the deadline day, and lock at
+least an hour before. Nothing below should get in its way.
 
 **Then the public app**, in this order:
 
