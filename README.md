@@ -4,7 +4,7 @@ An FPL decision-making system that manages a real squad for the full 2026-27 Pre
 
 > **The Experiment:** Can a strictly leak-free, data-driven pipeline — combining predictive modeling, integer linear programming (ILP), and walk-forward validation — outperform an experienced human FPL manager over 38 Gameweeks?
 >
-> 📌 **Live Season Status (20 Nov 2026):** **GW11 locked** before the deadline (V1). Every result is reported below, including the misses. This is an experiment, not betting or FPL advice.
+> 📌 **Live Season Status (27 Nov 2026):** **GW12 locked** before the deadline (V1). GW11 reviewed: AI 39, human 44. Every result is reported below, including the misses. This is an experiment, not betting or FPL advice.
 
 ---
 
@@ -88,7 +88,7 @@ The system operates as an end-to-end modular pipeline. Each module in [`src/`](s
 
 ---
 
-## 📈 Live Season Record (up to GW11)
+## 📈 Live Season Record (up to GW12)
 
 A locked decision is written to disk *before* the gameweek deadline and is never edited afterwards. Weeks without a lock are listed too, with the reason. Predicted points are the starting XI plus the captain's double.
 
@@ -101,7 +101,8 @@ A locked decision is written to disk *before* the gameweek deadline and is never
 | **GW6** | V1 | 🔒 Locked | 69.34 | — | The real account differed from the lock in 5 players, so not a clean AI week. |
 | **GW7–9** | — | Not locked | — | ~50 (GW9) | The account played the synced squad without new locks. |
 | **GW10** | V1 (advised) | Not locked | — | 70 | The lock was never confirmed. The 3 suggested transfers and the suggested captain (Barry) were played. AI-advised, not a locked AI decision. |
-| **GW11** | V1 | 🔒 Locked | 59.82 | *pending* | Suspended Thiago → Evanilson (1 free transfer, no hit). Captain Barry, VC Evanilson. |
+| **GW11** | V1 | ✅ Locked & reviewed | 59.82 | 39 | Suspended Thiago → Evanilson (1 free transfer, no hit). Captain Barry scored 2; Haaland, Gibbs-White and Rushworth also scored 2 each. Best: Tavernier 8. A low-scoring week overall: the human team scored 44. |
+| **GW12** | V1 | 🔒 Locked | 62.56 | *pending* | Mbeumo → Barcola (1 free transfer, no hit). Captain Tavernier, VC Evanilson. |
 
 Records the experiment needs to keep are copied to [`data/records/`](data/records).
 
